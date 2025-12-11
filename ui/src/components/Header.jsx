@@ -1,14 +1,12 @@
 import './Header.css'
 
-function Header({ currentPage }) {
+function Header({ currentPage, onPageChange }) {
   const handleAdminClick = () => {
-    // 관리자 화면으로 이동 (추후 구현)
-    console.log('관리자 화면으로 이동')
+    onPageChange('admin')
   }
 
   const handleOrderClick = () => {
-    // 주문하기 화면으로 이동 (추후 구현)
-    console.log('주문하기 화면으로 이동')
+    onPageChange('order')
   }
 
   return (

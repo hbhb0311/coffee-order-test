@@ -26,10 +26,11 @@
 
 .nav-button {
   padding: 10px 20px;
-  border: 1px solid #ffffff;
+  border: 2px solid #ffffff;
   background-color: #c8a2c8;
   color: #ffffff;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   border-radius: 4px;

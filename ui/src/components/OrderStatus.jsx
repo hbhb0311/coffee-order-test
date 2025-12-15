@@ -26,6 +26,7 @@ function OrderStatus({ orders, onUpdateOrderStatus, statusFilter }) {
         <button
           className="status-button"
           onClick={() => onUpdateOrderStatus(order.id, 'in_progress')}
+          aria-label="주문 상태를 제조 중으로 변경"
         >
           제조 시작
         </button>
@@ -35,13 +36,18 @@ function OrderStatus({ orders, onUpdateOrderStatus, statusFilter }) {
         <button
           className="status-button"
           onClick={() => onUpdateOrderStatus(order.id, 'completed')}
+          aria-label="주문 상태를 제조 완료로 변경"
         >
           제조 완료
         </button>
       )
     } else {
       return (
-        <button className="status-button completed" disabled>
+        <button 
+          className="status-button completed" 
+          disabled
+          aria-label="제조 완료됨"
+        >
           제조 완료
         </button>
       )

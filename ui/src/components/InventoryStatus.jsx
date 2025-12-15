@@ -10,7 +10,11 @@ function InventoryStatus({ inventory, onUpdateInventory }) {
   const handleQuantityChange = (menuId, change) => {
     const currentQuantity = inventory[menuId] || 0
     const newQuantity = Math.max(0, currentQuantity + change)
-    onUpdateInventory(menuId, newQuantity)
+    
+    // 입력 검증: 최대값 제한 (예: 999개)
+    const validatedQuantity = Math.min(999, newQuantity)
+    
+    onUpdateInventory(menuId, validatedQuantity)
   }
 
   const menuNames = {
@@ -44,12 +48,14 @@ function InventoryStatus({ inventory, onUpdateInventory }) {
                 <button
                   className="inventory-button"
                   onClick={() => handleQuantityChange(menuId, -1)}
+                  aria-label={`${menuNames[menuId]} 재고 감소`}
                 >
                   -
                 </button>
                 <button
                   className="inventory-button"
                   onClick={() => handleQuantityChange(menuId, 1)}
+                  aria-label={`${menuNames[menuId]} 재고 증가`}
                 >
                   +
                 </button>

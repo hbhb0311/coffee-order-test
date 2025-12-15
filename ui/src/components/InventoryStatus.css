@@ -1,6 +1,6 @@
 .inventory-status {
   background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -19,7 +19,7 @@
 
 .inventory-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 15px;
   flex: 1;
   overflow-y: auto;
@@ -28,12 +28,14 @@
 }
 
 .inventory-card {
-  border: 1px solid #e0e0e0;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
   padding: 15px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .inventory-header {

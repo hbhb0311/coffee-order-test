@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import './MenuCard.css'
 
-function MenuCard({ menuItem, onAddToCart, resetKey }) {
+function MenuCard({ menuItem, onAddToCart, onDirectOrder, resetKey }) {
   const [selectedOptions, setSelectedOptions] = useState([])
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     // resetKey가 변경되면 옵션 초기화
@@ -21,6 +22,10 @@ function MenuCard({ menuItem, onAddToCart, resetKey }) {
     onAddToCart(menuItem, selectedOptions)
   }
 
+  const handleDirectOrder = () => {
+    onDirectOrder(menuItem, selectedOptions)
+  }
+
   const formatPrice = (price) => {
     return price.toLocaleString('ko-KR') + '원'
   }
@@ -28,8 +33,13 @@ function MenuCard({ menuItem, onAddToCart, resetKey }) {
   return (
     <div className="menu-card">
       <div className="menu-image-container">
-        {menuItem.image ? (
-          <img src={menuItem.image} alt={menuItem.name} className="menu-image" />
+        {menuItem.image && !imageError ? (
+          <img 
+            src={menuItem.image} 
+            alt={menuItem.name} 
+            className="menu-image"
+            onError={() => setImageError(true)}
+          />
         ) : (
           <div className="menu-image-placeholder">
             <div className="placeholder-line"></div>
@@ -55,9 +65,34 @@ function MenuCard({ menuItem, onAddToCart, resetKey }) {
             </label>
           ))}
         </div>
-        <button className="add-to-cart-button" onClick={handleAddToCart}>
-          담기
-        </button>
+        <div className="menu-buttons">
+          <button 
+            className="menu-order-button" 
+            onClick={handleDirectOrder}
+            aria-label={`${menuItem.name} 바로 주문하기`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleDirectOrder()
+              }
+            }}
+          >
+            주문하기
+          </button>
+          <button 
+            className="add-to-cart-button" 
+            onClick={handleAddToCart}
+            aria-label={`${menuItem.name} 장바구니에 담기`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                handleAddToCart()
+              }
+            }}
+          >
+            담기
+          </button>
+        </div>
       </div>
     </div>
   )

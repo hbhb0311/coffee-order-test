@@ -379,94 +379,162 @@
 
 ### 6.1 데이터 모델
 
-#### 6.1.1 Menu (메뉴)
-메뉴 정보를 저장하는 테이블입니다.
+#### 6.1.1 Product (상품)
+상품 정보를 저장하는 테이블입니다.
 
 **필드:**
-- `id` (INTEGER, PRIMARY KEY): 메뉴 고유 ID
-- `name` (VARCHAR): 커피 이름 (예: "아메리카노(ICE)", "카페라떼")
-- `description` (TEXT): 메뉴 설명
-- `price` (INTEGER): 기본 가격 (원 단위)
-- `image` (VARCHAR): 이미지 URL 또는 경로
-- `stock` (INTEGER): 재고 수량 (기본값: 10, 최대값: 999)
-- `created_at` (TIMESTAMP): 생성 일시
-- `updated_at` (TIMESTAMP): 수정 일시
+- `prd_id` (INTEGER, PRIMARY KEY): 상품 고유 ID
+- `prd_nm` (VARCHAR): 상품 이름 (예: "아메리카노(ICE)", "카페라떼")
+- `prd_desc` (TEXT): 상품 설명
+- `prd_prc` (INTEGER): 기본 가격 (원 단위)
+- `prd_img` (VARCHAR): 이미지 URL 또는 경로
+- `prd_stk` (INTEGER): 재고 수량 (기본값: 10, 최대값: 999)
+- `crt_dt` (TIMESTAMP): 생성 일시
+- `updt_dt` (TIMESTAMP): 수정 일시
 
 **제약 조건:**
-- `price`는 0 이상의 정수
-- `stock`은 0 이상 999 이하의 정수
+- `prd_prc`는 0 이상의 정수
+- `prd_stk`은 0 이상 999 이하의 정수
 
 #### 6.1.2 Option (옵션)
-메뉴에 추가할 수 있는 옵션 정보를 저장하는 테이블입니다.
+상품에 추가할 수 있는 옵션 정보를 저장하는 테이블입니다. 하나의 옵션은 여러 상품에 적용될 수 있습니다.
 
 **필드:**
-- `id` (INTEGER, PRIMARY KEY): 옵션 고유 ID
-- `name` (VARCHAR): 옵션 이름 (예: "샷 추가", "시럽 추가")
-- `price` (INTEGER): 옵션 추가 가격 (원 단위, 0 이상)
-- `menu_id` (INTEGER, FOREIGN KEY): 연결된 메뉴 ID (Menu 테이블 참조)
-- `created_at` (TIMESTAMP): 생성 일시
-- `updated_at` (TIMESTAMP): 수정 일시
+- `opt_id` (INTEGER, PRIMARY KEY): 옵션 고유 ID
+- `opt_nm` (VARCHAR): 옵션 이름 (예: "샷 추가", "시럽 추가", "휘핑 크림")
+- `opt_prc` (INTEGER): 옵션 추가 가격 (원 단위, 0 이상)
+- `crt_dt` (TIMESTAMP): 생성 일시
+- `updt_dt` (TIMESTAMP): 수정 일시
 
 **제약 조건:**
-- `price`는 0 이상의 정수
-- `menu_id`는 Menu 테이블의 유효한 ID를 참조해야 함
+- `opt_prc`는 0 이상의 정수
 
-#### 6.1.3 Order (주문)
-주문 정보를 저장하는 테이블입니다.
+**예시 옵션:**
+- 샷 추가 (+500원): 에스프레소 샷 추가
+- 시럽 추가 (+0원): 바닐라, 헤이즐넛 등 시럽 추가
+- 휘핑 크림 (+500원): 휘핑 크림 추가
+- 사이즈 업 (+1000원): 사이즈 업그레이드
+
+#### 6.1.3 ProductOption (상품-옵션 관계)
+Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이블입니다. 하나의 상품에 여러 옵션을 연결할 수 있고, 하나의 옵션이 여러 상품에 적용될 수 있습니다.
 
 **필드:**
-- `id` (INTEGER, PRIMARY KEY): 주문 고유 ID
-- `order_date` (TIMESTAMP): 주문 일시
-- `status` (VARCHAR): 주문 상태
+- `prd_opt_id` (INTEGER, PRIMARY KEY): 관계 고유 ID
+- `prd_id` (INTEGER, FOREIGN KEY): 상품 ID (Product 테이블 참조)
+- `opt_id` (INTEGER, FOREIGN KEY): 옵션 ID (Option 테이블 참조)
+- `del_yn` (VARCHAR): 삭제 여부
+- `crt_dt` (TIMESTAMP): 생성 일시
+- `updt_dt` (TIMESTAMP): 수정 일시
+
+**제약 조건:**
+- `prd_id`는 Product 테이블의 유효한 ID를 참조해야 함
+- `opt_id`는 Option 테이블의 유효한 ID를 참조해야 함
+- `(prd_id, opt_id)` 조합은 UNIQUE (동일한 상품-옵션 관계 중복 방지)
+
+**사용 예시:**
+- 아메리카노(ICE)에 "샷 추가", "시럽 추가" 옵션 연결
+- 카페라떼에 "샷 추가", "시럽 추가", "휘핑 크림" 옵션 연결
+- 카라멜 마키아토에 "샷 추가", "시럽 추가", "휘핑 크림", "사이즈 업" 옵션 연결
+
+#### 6.1.4 Order (주문)
+주문 정보를 저장하는 테이블입니다. 최종 주문 상태만 관리하며, 상태 변경 이력은 OrderStatusHistory 테이블에서 별도로 관리합니다.
+
+**필드:**
+- `ord_id` (INTEGER, PRIMARY KEY): 주문 고유 ID
+- `ord_dt` (TIMESTAMP): 주문 일시
+- `ord_sts` (VARCHAR): 최종 주문 상태 (현재 상태)
   - "received": 주문 접수
   - "in_progress": 제조 중
   - "completed": 제조 완료
-- `total_amount` (INTEGER): 총 주문 금액 (원 단위)
-- `created_at` (TIMESTAMP): 생성 일시
-- `updated_at` (TIMESTAMP): 수정 일시
+- `tot_amt` (INTEGER): 총 주문 금액 (원 단위)
+- `crt_dt` (TIMESTAMP): 생성 일시
+- `updt_dt` (TIMESTAMP): 수정 일시
 
 **제약 조건:**
-- `status`는 "received", "in_progress", "completed" 중 하나여야 함
-- `total_amount`는 0 이상의 정수
+- `ord_sts`는 "received", "in_progress", "completed" 중 하나여야 함
+- `tot_amt`는 0 이상의 정수
 
-#### 6.1.4 OrderItem (주문 항목)
-주문에 포함된 개별 메뉴 항목 정보를 저장하는 테이블입니다.
+**설명:**
+- 주문 생성 시 `ord_sts`는 "received"로 초기화됨
+- 주문 상태가 변경될 때마다 `ord_sts`가 업데이트되고, 동시에 OrderStatusHistory 테이블에 이력이 기록됨
+- 최종 상태만 조회하면 되므로 빠른 조회가 가능함
+
+#### 6.1.5 OrderStatusHistory (주문 상태 변경 이력)
+주문 상태 변경 이력을 저장하는 테이블입니다. 주문이 생성될 때부터 완료될 때까지의 모든 상태 변경 내역을 추적합니다.
 
 **필드:**
-- `id` (INTEGER, PRIMARY KEY): 주문 항목 고유 ID
-- `order_id` (INTEGER, FOREIGN KEY): 주문 ID (Order 테이블 참조)
-- `menu_id` (INTEGER, FOREIGN KEY): 메뉴 ID (Menu 테이블 참조)
-- `quantity` (INTEGER): 주문 수량
-- `unit_price` (INTEGER): 단가 (메뉴 가격 + 옵션 가격)
-- `subtotal` (INTEGER): 소계 (단가 × 수량)
-- `created_at` (TIMESTAMP): 생성 일시
+- `ord_sts_hist_id` (INTEGER, PRIMARY KEY): 주문 상태 이력 고유 ID
+- `ord_id` (INTEGER, FOREIGN KEY): 주문 ID (Order 테이블 참조)
+- `ord_sts` (VARCHAR): 변경된 주문 상태
+  - "received": 주문 접수
+  - "in_progress": 제조 중
+  - "completed": 제조 완료
+- `crt_dt` (TIMESTAMP): 생성 일시
+- `updt_dt` (TIMESTAMP): 수정 일시
 
 **제약 조건:**
-- `quantity`는 1 이상의 정수
-- `unit_price`와 `subtotal`은 0 이상의 정수
+- `ord_id`는 Order 테이블의 유효한 ID를 참조해야 함
+- `ord_sts`는 "received", "in_progress", "completed" 중 하나여야 함
 
-#### 6.1.5 OrderItemOption (주문 항목 옵션)
-주문 항목에 선택된 옵션 정보를 저장하는 테이블입니다.
+**사용 예시:**
+- 주문 생성 시: ord_id=1, ord_sts="received", crt_dt=2025-01-15 10:00:00
+- 제조 시작 시: ord_id=1, ord_sts="in_progress", crt_dt=2025-01-15 10:05:00
+- 제조 완료 시: ord_id=1, ord_sts="completed", crt_dt=2025-01-15 10:10:00
+
+**설명:**
+- 주문이 생성될 때 첫 번째 이력 레코드가 자동으로 생성됨 (상태: "received")
+- 주문 상태가 변경될 때마다 새로운 이력 레코드가 추가됨
+- 주문별 상태 변경 히스토리를 시간순으로 조회 가능
+- 각 상태 변경 시점을 정확히 추적할 수 있음
+
+#### 6.1.6 OrderProduct (주문 상품)
+주문에 포함된 개별 상품 정보를 저장하는 테이블입니다. 하나의 주문 상품에 여러 옵션이 선택될 수 있습니다.
 
 **필드:**
-- `id` (INTEGER, PRIMARY KEY): 주문 항목 옵션 고유 ID
-- `order_item_id` (INTEGER, FOREIGN KEY): 주문 항목 ID (OrderItem 테이블 참조)
-- `option_id` (INTEGER, FOREIGN KEY): 옵션 ID (Option 테이블 참조)
-- `created_at` (TIMESTAMP): 생성 일시
+- `ord_prd_id` (INTEGER, PRIMARY KEY): 주문 항목 고유 ID
+- `ord_id` (INTEGER, FOREIGN KEY): 주문 ID (Order 테이블 참조)
+- `prd_id` (INTEGER, FOREIGN KEY): 상품 ID (Product 테이블 참조)
+- `prd_cnt` (INTEGER): 주문 수량
+- `unit_amt` (INTEGER): 단가 (메뉴 가격 + 선택된 모든 옵션 가격의 합)
+- `subtot_amt` (INTEGER): 소계 (단가 × 수량)
+- `crt_dt` (TIMESTAMP): 생성 일시
 
 **제약 조건:**
-- `order_item_id`와 `option_id`는 각각 유효한 ID를 참조해야 함
+- `prd_cnt`는 1 이상의 정수
+- `unit_amt`와 `subtot_amt`은 0 이상의 정수
+
+**단가 계산 예시:**
+- 아메리카노(ICE) 4,000원 + 샷 추가 500원 + 시럽 추가 0원 = 4,500원
+
+#### 6.1.7 OrderProductOption (주문 상품 옵션)
+주문 상품에 선택된 옵션 정보를 저장하는 테이블입니다. 하나의 주문 상품에 여러 옵션이 동시에 선택될 수 있으므로, 선택된 각 옵션에 대해 별도의 레코드가 생성됩니다.
+
+**필드:**
+- `ord_opt_id` (INTEGER, PRIMARY KEY): 주문 상품 옵션 고유 ID
+- `ord_prd_id` (INTEGER, FOREIGN KEY): 주문 상품 ID (OrderProduct 테이블 참조)
+- `opt_id` (INTEGER, FOREIGN KEY): 옵션 ID (Option 테이블 참조)
+- `opt_prc` (INTEGER): 옵션 가격 (주문 시점의 가격 기록)
+- `crt_dt` (TIMESTAMP): 생성 일시
+
+**제약 조건:**
+- `ord_prd_id`와 `opt_id`는 각각 유효한 ID를 참조해야 함
+- `opt_prc`는 0 이상의 정수
+
+**사용 예시:**
+- 주문 항목 1 (아메리카노 ICE)에 "샷 추가"와 "시럽 추가" 2개의 옵션이 선택된 경우:
+  - OrderProductOption 레코드 1: ord_prd_id=1, opt_id=1 (샷 추가), opt_prc=500
+  - OrderProductOption 레코드 2: ord_prd_id=1, opt_id=2 (시럽 추가), opt_prc=0
 
 ### 6.2 데이터 스키마를 위한 사용자 흐름
 
 #### 6.2.1 메뉴 조회 및 표시
 1. **프론트엔드 요청**: 주문하기 화면 진입 시 메뉴 목록 조회 요청
 2. **백엔드 처리**: 
-   - Menu 테이블에서 모든 메뉴 정보 조회
-   - 각 메뉴에 연결된 Option 정보도 함께 조회
+   - Product 테이블에서 모든 메뉴 정보 조회
+   - ProductOption 테이블을 통해 각 메뉴에 연결된 Option 정보 조회 (다대다 관계)
    - 재고 수량(stock) 정보 포함
 3. **프론트엔드 표시**:
-   - 주문하기 화면: 메뉴 이름, 설명, 가격, 이미지, 옵션 정보 표시
+   - 주문하기 화면: 메뉴 이름, 설명, 가격, 이미지, 해당 메뉴에 적용 가능한 옵션 정보 표시
    - 관리자 화면: 재고 수량(stock) 정보 표시
 
 #### 6.2.2 장바구니 관리
@@ -479,31 +547,40 @@
    - 메뉴 카드의 "주문하기" 버튼 또는 장바구니의 "주문하기" 버튼 클릭
 2. **주문 정보 전송**:
    - 주문 일시: 현재 시간
-   - 주문 내용: 메뉴 ID, 수량, 선택된 옵션 ID 목록, 각 항목의 금액
+   - 주문 내용: 상품 ID, 수량, 선택된 옵션 ID 목록, 각 항목의 금액
    - 총 금액: 모든 주문 항목의 소계 합계
 3. **백엔드 처리**:
    - Order 테이블에 주문 정보 저장 (상태: "received")
-   - OrderItem 테이블에 각 주문 항목 저장
-   - OrderItemOption 테이블에 선택된 옵션 정보 저장
-   - 주문된 메뉴의 재고 수량 감소 (Menu 테이블의 stock 업데이트)
+   - OrderStatusHistory 테이블에 초기 상태 이력 저장 (상태: "received", 생성 일시: 주문 생성 일시)
+   - OrderProduct 테이블에 각 주문 상품 저장
+   - OrderProductOption 테이블에 선택된 옵션 정보 저장
+   - 주문된 상품의 재고 수량 감소 (Product 테이블의 prd_stk 업데이트)
 4. **응답**: 생성된 주문 ID 반환
 
 #### 6.2.4 주문 현황 조회 및 상태 변경
 1. **주문 목록 조회**:
    - 관리자 화면 진입 시 또는 주문 현황 영역 표시 시
    - Order 테이블에서 모든 주문 조회 (최신순 정렬)
-   - 각 주문의 OrderItem과 OrderItemOption 정보도 함께 조회
+   - 각 주문의 OrderProduct와 OrderProductOption 정보도 함께 조회
+   - Order 테이블의 `ord_sts` 필드로 현재 상태 확인
 2. **주문 상태 변경**:
-   - "주문 접수" → "제조 중": status를 "in_progress"로 업데이트
-   - "제조 중" → "제조 완료": status를 "completed"로 업데이트
+   - "주문 접수" → "제조 중": 
+     - Order 테이블의 `ord_sts`를 "in_progress"로 업데이트
+     - OrderStatusHistory 테이블에 새로운 이력 레코드 추가 (상태: "in_progress", 생성 일시: 현재 시간)
+   - "제조 중" → "제조 완료":
+     - Order 테이블의 `ord_sts`를 "completed"로 업데이트
+     - OrderStatusHistory 테이블에 새로운 이력 레코드 추가 (상태: "completed", 생성 일시: 현재 시간)
    - "제조 완료" 상태에서는 더 이상 변경 불가
-3. **실시간 업데이트**: 상태 변경 시 관리자 대시보드 통계 정보도 함께 업데이트
+3. **주문 상태 이력 조회**:
+   - 특정 주문의 상태 변경 이력을 조회하려면 OrderStatusHistory 테이블에서 `ord_id`로 필터링하여 시간순으로 조회
+   - 각 상태 변경 시점을 정확히 추적 가능
+4. **실시간 업데이트**: 상태 변경 시 관리자 대시보드 통계 정보도 함께 업데이트
 
 ### 6.3 API 설계
 
 #### 6.3.1 메뉴 목록 조회 API
 
-**엔드포인트:** `GET /api/menus`
+**엔드포인트:** `GET /api/menu`
 
 **설명:** 주문하기 화면 진입 시 DB에서 메뉴 목록을 불러와 보여줍니다.
 
@@ -518,12 +595,12 @@
   "success": true,
   "data": [
     {
-      "id": 1,
-      "name": "아메리카노(ICE)",
-      "description": "간단한 설명...",
-      "price": 4000,
-      "image": "https://example.com/image.jpg",
-      "stock": 10,
+      "prd_id": 1,
+      "prd_nm": "아메리카노(ICE)",
+      "prd_desc": "간단한 설명...",
+      "prd_prc": 4000,
+      "prd_img": "https://example.com/image.jpg",
+      "prd_stk": 10,
       "options": [
         {
           "id": 1,
@@ -711,7 +788,7 @@
 
 **엔드포인트:** `PATCH /api/orders/:orderId/status`
 
-**설명:** 주문의 상태를 변경합니다 (주문 접수 → 제조 중 → 제조 완료).
+**설명:** 주문의 상태를 변경합니다 (주문 접수 → 제조 중 → 제조 완료). Order 테이블의 최종 상태를 업데이트하고, OrderStatusHistory 테이블에 이력을 기록합니다.
 
 **요청:**
 - Method: PATCH
@@ -732,7 +809,8 @@
   "data": {
     "orderId": 123,
     "status": "in_progress",
-    "updatedAt": "2025-01-15T10:35:00Z"
+    "updatedAt": "2025-01-15T10:35:00Z",
+    "historyId": 456
   }
 }
 ```
@@ -749,8 +827,69 @@
 - 상태 변경 순서 검증: "received" → "in_progress" → "completed"
 - "completed" 상태에서는 더 이상 변경 불가
 - 잘못된 상태 변경 시도 시 에러 반환
+- 트랜잭션 처리:
+  1. Order 테이블의 `ord_sts` 업데이트
+  2. Order 테이블의 `updt_dt` 업데이트
+  3. OrderStatusHistory 테이블에 새로운 이력 레코드 추가
+     - `ord_id`: 주문 ID
+     - `ord_sts`: 변경된 상태
+     - `chg_dt`: 현재 시간
+- 트랜잭션 실패 시 롤백 처리
 
-#### 6.3.6 재고 수정 API
+#### 6.3.6 주문 상태 이력 조회 API
+
+**엔드포인트:** `GET /api/orders/:orderId/history`
+
+**설명:** 특정 주문의 상태 변경 이력을 시간순으로 조회합니다.
+
+**요청:**
+- Method: GET
+- Headers: 없음
+- Path Parameters:
+  - `orderId`: 주문 ID (INTEGER)
+
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "orderId": 123,
+    "currentStatus": "completed",
+    "history": [
+      {
+        "id": 1,
+        "status": "received",
+        "changedAt": "2025-01-15T10:30:00Z"
+      },
+      {
+        "id": 2,
+        "status": "in_progress",
+        "changedAt": "2025-01-15T10:35:00Z"
+      },
+      {
+        "id": 3,
+        "status": "completed",
+        "changedAt": "2025-01-15T10:40:00Z"
+      }
+    ]
+  }
+}
+```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": "주문을 찾을 수 없습니다."
+}
+```
+
+**비즈니스 로직:**
+- OrderStatusHistory 테이블에서 `ord_id`로 필터링
+- `chg_dt` 기준 오름차순 정렬 (시간순)
+- Order 테이블에서 현재 상태도 함께 조회
+
+#### 6.3.7 재고 수정 API
 
 **엔드포인트:** `PATCH /api/menus/:menuId/stock`
 
@@ -792,7 +931,7 @@
 - 재고 수량은 0 이상 999 이하로 제한
 - 유효하지 않은 값 입력 시 에러 반환
 
-#### 6.3.7 주문 통계 조회 API
+#### 6.3.8 주문 통계 조회 API
 
 **엔드포인트:** `GET /api/orders/statistics`
 
@@ -820,35 +959,81 @@
 
 #### 6.4.1 테이블 관계도
 ```
-Menu (1) ──< (N) Option
-Menu (1) ──< (N) OrderItem
-Order (1) ──< (N) OrderItem
-OrderItem (1) ──< (N) OrderItemOption
-Option (1) ──< (N) OrderItemOption
+┌─────────────────────────────────────────────────────────────┐
+│                  상품-옵션 관계 (N:M)                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│    Product (N) ──< ProductOption >── (M) Option             │
+│      │                              │                       │
+│      │                              │                       │
+│      └──────────┐    ┌──────────────┘                       │
+│                 │    │                                      │
+│                 ▼    ▼                                      │
+│              ┌──────────────┐                               │
+│              │OrderProduct  │                               │
+│              └──────┬───────┘                               │
+│                     │                                        │
+│                     ▼                                        │
+│           OrderProductOption                                │
+│                                                             │
+│    Order (1) ──< (N) OrderStatusHistory                     │
+│      │                                                      │
+│      │                                                      │
+│      └──< (N) OrderProduct                                 │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+상세 관계:
+- Product (N) ──< ProductOption >── (M) Option  [다대다 관계]
+- Product (1) ──< (N) OrderProduct
+- Order (1) ──< (N) OrderProduct
+- Order (1) ──< (N) OrderStatusHistory  [상태 변경 이력]
+- OrderProduct (1) ──< (N) OrderProductOption
+- Option (1) ──< (N) OrderProductOption
+
+설명:
+- Product와 Option은 ProductOption 테이블을 통해 다대다(N:M) 관계
+- 하나의 상품에 여러 옵션을 적용할 수 있음
+- 하나의 옵션이 여러 상품에 공통으로 적용될 수 있음
+- 주문 시 하나의 OrderProduct에 여러 옵션을 동시에 선택 가능 (OrderProductOption)
+- Order 테이블에는 최종 주문 상태만 저장
+- OrderStatusHistory 테이블에 주문 상태 변경 이력이 모두 기록됨
+- 주문 생성 시 OrderStatusHistory에 초기 상태("received") 이력이 자동 생성됨
+- 주문 상태 변경 시마다 OrderStatusHistory에 새로운 이력 레코드가 추가됨
 ```
 
 #### 6.4.2 인덱스 설계
-- `Menu.id`: PRIMARY KEY
-- `Option.menu_id`: FOREIGN KEY 인덱스
-- `Order.id`: PRIMARY KEY
-- `Order.status`: 상태별 조회를 위한 인덱스
-- `Order.order_date`: 시간순 정렬을 위한 인덱스
-- `OrderItem.order_id`: FOREIGN KEY 인덱스
-- `OrderItem.menu_id`: FOREIGN KEY 인덱스
-- `OrderItemOption.order_item_id`: FOREIGN KEY 인덱스
-- `OrderItemOption.option_id`: FOREIGN KEY 인덱스
+- `Product.prd_id`: PRIMARY KEY
+- `Option.opt_id`: PRIMARY KEY
+- `ProductOption.prd_id`: FOREIGN KEY 인덱스
+- `ProductOption.opt_id`: FOREIGN KEY 인덱스
+- `ProductOption.(prd_id, opt_id)`: UNIQUE 인덱스 (복합 유니크)
+- `Order.ord_id`: PRIMARY KEY
+- `Order.ord_sts`: 상태별 조회를 위한 인덱스
+- `Order.ord_dt`: 시간순 정렬을 위한 인덱스
+- `OrderStatusHistory.ord_id`: FOREIGN KEY 인덱스 (주문별 이력 조회)
+- `OrderStatusHistory.chg_dt`: 시간순 정렬을 위한 인덱스
+- `OrderStatusHistory.(ord_id, chg_dt)`: 복합 인덱스 (주문별 시간순 조회 최적화)
+- `OrderProduct.ord_id`: FOREIGN KEY 인덱스
+- `OrderProduct.prd_id`: FOREIGN KEY 인덱스
+- `OrderProductOption.ord_prd_id`: FOREIGN KEY 인덱스
+- `OrderProductOption.opt_id`: FOREIGN KEY 인덱스
 
 #### 6.4.3 제약 조건
 - 외래 키 제약 조건: 참조 무결성 보장
+- 유니크 제약 조건:
+  - `ProductOption.(prd_id, opt_id)`: 동일한 상품-옵션 관계 중복 방지
 - 체크 제약 조건: 
-  - `Menu.stock`: 0 이상 999 이하
-  - `Menu.price`: 0 이상
-  - `Option.price`: 0 이상
-  - `Order.status`: "received", "in_progress", "completed" 중 하나
-  - `Order.total_amount`: 0 이상
-  - `OrderItem.quantity`: 1 이상
-  - `OrderItem.unit_price`: 0 이상
-  - `OrderItem.subtotal`: 0 이상
+  - `Product.prd_stk`: 0 이상 999 이하
+  - `Product.prd_prc`: 0 이상
+  - `Option.opt_prc`: 0 이상
+  - `Order.ord_sts`: "received", "in_progress", "completed" 중 하나
+  - `Order.tot_amt`: 0 이상
+  - `OrderStatusHistory.ord_sts`: "received", "in_progress", "completed" 중 하나
+  - `OrderProduct.prd_cnt`: 1 이상
+  - `OrderProduct.unit_amt`: 0 이상
+  - `OrderProduct.subtot_amt`: 0 이상
+  - `OrderProductOption.opt_prc`: 0 이상
 
 ### 6.5 에러 처리
 

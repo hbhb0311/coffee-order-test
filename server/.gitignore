@@ -1,0 +1,80 @@
+# 의존성
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+# package-lock.json은 버전 관리에 포함하는 것을 권장합니다
+
+# 환경 변수
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# 로그 파일
+*.log
+logs/
+*.log.*
+
+# 운영체제 파일
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE 및 에디터 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# 빌드 및 배포 파일
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+
+# 테스트 및 커버리지
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# 임시 파일
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+
+# 데이터베이스
+*.sql.backup
+*.sql.dump
+*.db
+*.sqlite
+*.sqlite3
+
+# 기타
+*.pid
+*.seed
+*.pid.lock
+.npm
+.eslintcache
+.stylelintcache
+

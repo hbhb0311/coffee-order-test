@@ -99,7 +99,8 @@
   - "장바구니에 담겼습니다." 알림 표시
 - 주문하기 버튼 클릭 시:
   - 선택된 옵션과 함께 해당 메뉴를 바로 주문 처리
-  - 주문이 완료되면 "주문이 완료되었습니다!" 알림 표시
+  - 재고가 부족한 경우 "재고가 없습니다." Toast 알림 표시
+  - 주문이 완료되면 "주문이 완료되었습니다!" Toast 알림 표시
   - 모든 메뉴 카드의 옵션이 자동으로 초기화됨
 - 이미지 로딩 실패 시 자동으로 플레이스홀더 표시
 
@@ -158,9 +159,11 @@
 - 전체 삭제:
   - "전체 삭제" 버튼으로 장바구니의 모든 아이템 한 번에 삭제
 - 주문하기 버튼 클릭 시:
-  - 장바구니에 아이템이 있는 경우 주문 처리
-  - 장바구니가 비어있는 경우 "장바구니가 비어있습니다." 알림 표시
-  - 주문 완료 후 "주문이 완료되었습니다!" 알림 표시 및 장바구니 초기화
+  - 장바구니가 비어있는 경우 "장바구니가 비어있습니다." Toast 알림 표시
+  - 장바구니에 아이템이 있는 경우 재고 검증 후 주문 처리
+  - 재고가 부족한 경우 "재고가 없습니다." Toast 알림 표시
+  - 재고가 충분한 경우 주문 처리 및 "주문이 완료되었습니다!" Toast 알림 표시
+  - 주문 완료 후 장바구니 초기화
 - 아이템이 많을 경우 장바구니 영역 내부에서 스크롤 가능
 
 #### 4.1.5 UI/UX 요구사항
@@ -550,12 +553,18 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
    - 주문 내용: 상품 ID, 수량, 선택된 옵션 ID 목록, 각 항목의 금액
    - 총 금액: 모든 주문 항목의 소계 합계
 3. **백엔드 처리**:
-   - Order 테이블에 주문 정보 저장 (상태: "received")
-   - OrderStatusHistory 테이블에 초기 상태 이력 저장 (상태: "received", 생성 일시: 주문 생성 일시)
-   - OrderProduct 테이블에 각 주문 상품 저장
-   - OrderProductOption 테이블에 선택된 옵션 정보 저장
-   - 주문된 상품의 재고 수량 감소 (Product 테이블의 prd_stk 업데이트)
-4. **응답**: 생성된 주문 ID 반환
+   - **재고 검증**: 주문하려는 각 상품의 재고 수량 확인
+     - 주문 수량이 재고 수량보다 많으면 주문 실패 처리
+     - 재고 부족 시 "재고가 없습니다." 에러 메시지 반환
+   - 재고가 충분한 경우에만 다음 단계 진행:
+     - Order 테이블에 주문 정보 저장 (상태: "received")
+     - OrderStatusHistory 테이블에 초기 상태 이력 저장 (상태: "received", 생성 일시: 주문 생성 일시)
+     - OrderProduct 테이블에 각 주문 상품 저장
+     - OrderProductOption 테이블에 선택된 옵션 정보 저장
+     - 주문된 상품의 재고 수량 감소 (Product 테이블의 prd_stk 업데이트)
+4. **응답**: 
+   - 성공 시: 생성된 주문 ID 반환
+   - 실패 시: 재고 부족 에러 메시지 반환
 
 #### 6.2.4 주문 현황 조회 및 상태 변경
 1. **주문 목록 조회**:
@@ -603,14 +612,14 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
       "prd_stk": 10,
       "options": [
         {
-          "id": 1,
-          "name": "샷 추가",
-          "price": 500
+          "opt_id": 1,
+          "opt_nm": "샷 추가",
+          "opt_prc": 500
         },
         {
-          "id": 2,
-          "name": "시럽 추가",
-          "price": 0
+          "opt_id": 2,
+          "opt_nm": "시럽 추가",
+          "opt_prc": 0
         }
       ]
     },
@@ -629,7 +638,7 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
 
 #### 6.3.2 주문 생성 API
 
-**엔드포인트:** `POST /api/orders`
+**엔드포인트:** `POST /api/order`
 
 **설명:** 사용자가 메뉴를 선택하고 '주문하기' 버튼을 누르면 주문 정보를 DB에 저장합니다.
 
@@ -641,15 +650,15 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
 {
   "items": [
     {
-      "menuId": 1,
-      "quantity": 2,
+      "prdId": 1,
+      "prd_cnt": 2,
       "optionIds": [1, 2],
       "unitPrice": 4500,
       "subtotal": 9000
     },
     {
-      "menuId": 2,
-      "quantity": 1,
+      "prdId": 2,
+      "prd_cnt": 1,
       "optionIds": [],
       "unitPrice": 5000,
       "subtotal": 5000
@@ -676,14 +685,43 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
 ```json
 {
   "success": false,
-  "error": "주문 처리 중 오류가 발생했습니다."
+  "error": "재고가 없습니다.",
+  "code": "INSUFFICIENT_STOCK",
+  "data": {
+    "productId": 1,
+    "productName": "아메리카노(ICE)",
+    "requestedQuantity": 2,
+    "availableStock": 1
+  }
+}
+```
+
+또는
+
+```json
+{
+  "success": false,
+  "error": "주문 처리 중 오류가 발생했습니다.",
+  "code": "ORDER_PROCESSING_ERROR"
 }
 ```
 
 **비즈니스 로직:**
-- 주문 생성 시 각 메뉴의 재고 수량을 주문 수량만큼 감소
-- 재고가 부족한 경우 주문 실패 처리
-- 트랜잭션 처리로 주문 생성과 재고 감소를 원자적으로 처리
+1. **재고 검증 단계**:
+   - 주문하려는 각 상품에 대해 재고 수량 확인
+   - 주문 수량(`prd_cnt`)이 현재 재고 수량(`prd_stk`)보다 많으면 주문 실패
+   - 재고 부족 상품이 있으면 해당 상품 정보와 함께 에러 반환
+2. **주문 처리 단계** (재고 검증 통과 시):
+   - 트랜잭션 시작
+   - Order 테이블에 주문 정보 저장 (상태: "received")
+   - OrderStatusHistory 테이블에 초기 상태 이력 저장
+   - OrderProduct 테이블에 각 주문 상품 저장
+   - OrderProductOption 테이블에 선택된 옵션 정보 저장
+   - 각 상품의 재고 수량을 주문 수량만큼 감소 (Product 테이블의 prd_stk 업데이트)
+   - 트랜잭션 커밋
+3. **트랜잭션 처리**:
+   - 주문 생성과 재고 감소를 원자적으로 처리
+   - 중간에 오류 발생 시 전체 롤백
 
 #### 6.3.3 주문 정보 조회 API
 
@@ -702,28 +740,28 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
 {
   "success": true,
   "data": {
-    "id": 123,
+    "orderId": 123,
     "orderDate": "2025-01-15T10:30:00Z",
     "status": "received",
     "totalAmount": 14000,
     "items": [
       {
-        "id": 1,
-        "menuId": 1,
-        "menuName": "아메리카노(ICE)",
+        "prdOptId": 1,
+        "prdId": 1,
+        "prdName": "아메리카노(ICE)",
         "quantity": 2,
         "unitPrice": 4500,
         "subtotal": 9000,
         "options": [
           {
-            "id": 1,
-            "name": "샷 추가",
-            "price": 500
+            "opt_id": 1,
+            "opt_nm": "샷 추가",
+            "opt_prc": 500
           },
           {
-            "id": 2,
-            "name": "시럽 추가",
-            "price": 0
+            "opt_id": 2,
+            "opt_nm": "시럽 추가",
+            "opt_prc": 0
           }
         ]
       },
@@ -762,14 +800,14 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
   "data": {
     "orders": [
       {
-        "id": 123,
+        "orderId": 123,
         "orderDate": "2025-01-15T10:30:00Z",
         "status": "received",
         "totalAmount": 14000,
         "items": [
           {
-            "menuName": "아메리카노(ICE)",
-            "quantity": 2,
+            "prdName": "아메리카노(ICE)",
+            "prd_cnt": 2,
             "options": ["샷 추가", "시럽 추가"]
           },
           ...
@@ -899,7 +937,7 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
 - Method: PATCH
 - Headers: `Content-Type: application/json`
 - Path Parameters:
-  - `menuId`: 메뉴 ID (INTEGER)
+  - `prdId`: 메뉴 ID (INTEGER)
 - Body:
 ```json
 {
@@ -912,7 +950,7 @@ Product와 Option 사이의 다대다(N:M) 관계를 관리하는 중간 테이�
 {
   "success": true,
   "data": {
-    "menuId": 1,
+    "prdId": 1,
     "stock": 15,
     "updatedAt": "2025-01-15T10:40:00Z"
   }

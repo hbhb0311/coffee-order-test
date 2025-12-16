@@ -50,6 +50,8 @@ function App() {
           onOrder={handleOrder}
           resetKey={resetKey}
           setResetKey={setResetKey}
+          inventory={inventory}
+          onUpdateInventory={handleUpdateInventory}
         />
       ) : (
         <AdminPage

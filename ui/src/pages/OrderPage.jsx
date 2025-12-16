@@ -6,7 +6,7 @@ import { menuItems } from '../data/menuItems'
 import { generateId } from '../utils/idGenerator'
 import '../App.css'
 
-function OrderPage({ onOrder, resetKey, setResetKey }) {
+function OrderPage({ onOrder, resetKey, setResetKey, inventory, onUpdateInventory }) {
   const [cart, setCart] = useState([])
   const [toasts, setToasts] = useState([])
 
@@ -76,6 +76,18 @@ function OrderPage({ onOrder, resetKey, setResetKey }) {
       return
     }
     
+    // 재고 검증
+    const insufficientStockItems = cart.filter(item => {
+      const currentStock = inventory[item.menuId] || 0
+      return item.quantity > currentStock
+    })
+    
+    if (insufficientStockItems.length > 0) {
+      const itemName = insufficientStockItems[0].menuName
+      showToast('재고가 없습니다.')
+      return
+    }
+    
     // 주문 생성
     const order = {
       id: generateId(),
@@ -85,12 +97,26 @@ function OrderPage({ onOrder, resetKey, setResetKey }) {
       createdAt: new Date()
     }
     
+    // 재고 감소
+    cart.forEach(item => {
+      const currentStock = inventory[item.menuId] || 0
+      const newStock = currentStock - item.quantity
+      onUpdateInventory(item.menuId, newStock)
+    })
+    
     onOrder(order)
     showToast('주문이 완료되었습니다!')
     setCart([])
   }
 
   const handleDirectOrder = (menuItem, selectedOptions) => {
+    // 재고 검증
+    const currentStock = inventory[menuItem.id] || 0
+    if (currentStock < 1) {
+      showToast('재고가 없습니다.')
+      return
+    }
+    
     // 옵션 정보 처리 (유틸리티 함수 사용)
     const { optionNames, optionPrice } = processOptions(menuItem, selectedOptions)
     
@@ -109,6 +135,10 @@ function OrderPage({ onOrder, resetKey, setResetKey }) {
       status: 'received', // 주문 접수
       createdAt: new Date()
     }
+    
+    // 재고 감소
+    const newStock = currentStock - 1
+    onUpdateInventory(menuItem.id, newStock)
     
     onOrder(order)
     showToast('주문이 완료되었습니다!')

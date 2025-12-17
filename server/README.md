@@ -110,18 +110,28 @@ npm start
 ## API 엔드포인트
 
 ### 메뉴 관련
-- `GET /api/menu` - 메뉴 목록 조회
+- `GET /api/menus` - 메뉴 목록 조회
+  - 응답: 메뉴 목록 (이름, 가격, 옵션, 재고 등)
+- `PATCH /api/menus/:menuId/stock` - 재고 수정
+  - 요청 본문: `{ "stock": number }`
+  - 응답: 업데이트된 메뉴 정보
 
 ### 주문 관련
-- `POST /api/order` - 주문 생성
-- `GET /api/orders/:orderId` - 주문 정보 조회
 - `GET /api/orders` - 주문 목록 조회
+  - 쿼리 파라미터: `status` (선택사항, 주문 상태 필터)
+  - 응답: 주문 목록
+- `GET /api/orders/:orderId` - 주문 상세 조회
+  - 응답: 주문 상세 정보 (주문 항목, 상태, 총액 등)
+- `POST /api/orders` - 주문 생성
+  - 요청 본문: `{ "items": [...], "totalPrice": number }`
+  - 응답: 생성된 주문 정보
 - `PATCH /api/orders/:orderId/status` - 주문 상태 변경
+  - 요청 본문: `{ "status": "pending" | "preparing" | "completed" }`
+  - 응답: 업데이트된 주문 정보
 - `GET /api/orders/:orderId/history` - 주문 상태 이력 조회
+  - 응답: 주문 상태 변경 이력 목록
 - `GET /api/orders/statistics` - 주문 통계 조회
-
-### 재고 관련
-- `PATCH /api/menus/:prdId/stock` - 재고 수정
+  - 응답: 전체 주문 통계 (총 주문 수, 총 매출 등)
 
 ## 프로젝트 구조
 

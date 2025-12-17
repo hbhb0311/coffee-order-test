@@ -69,7 +69,19 @@ NODE_ENV=development
    ```
    ⚠️ **중요**: `DB_PASSWORD`에는 실제 PostgreSQL 비밀번호를 입력하세요.
 
-4. **연결 테스트**
+4. **데이터베이스 초기화**
+   ```bash
+   # PostgreSQL에 접속
+   psql -U postgres -d order_app
+   
+   # 스키마 생성
+   \i server/database/init.sql
+   
+   # 시드 데이터 삽입
+   \i server/database/seed.sql
+   ```
+
+5. **연결 테스트**
    서버를 실행하면 자동으로 데이터베이스 연결을 테스트합니다.
    연결 실패 시 콘솔에 상세한 에러 메시지와 해결 방법이 표시됩니다.
 

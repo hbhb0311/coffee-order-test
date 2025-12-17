@@ -1,14 +1,57 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import MenuCard from '../components/MenuCard'
 import ShoppingCart from '../components/ShoppingCart'
 import ToastContainer from '../components/ToastContainer'
-import { menuItems } from '../data/menuItems'
+import { menuAPI, orderAPI } from '../utils/api'
 import { generateId } from '../utils/idGenerator'
 import '../App.css'
 
 function OrderPage({ onOrder, resetKey, setResetKey, inventory, onUpdateInventory }) {
+  const [menuItems, setMenuItems] = useState([])
   const [cart, setCart] = useState([])
   const [toasts, setToasts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // 메뉴 목록 로드
+  useEffect(() => {
+    const loadMenus = async () => {
+      try {
+        const response = await menuAPI.getAllMenus()
+        if (response.success) {
+          // API 응답을 프론트엔드 형식으로 변환
+          const formattedMenus = response.data.map(menu => ({
+            id: menu.prd_id,
+            name: menu.prd_nm,
+            price: menu.prd_prc,
+            description: menu.prd_desc || '간단한 설명...',
+            image: menu.prd_img,
+            stock: menu.prd_stk,
+            options: menu.options.map(opt => ({
+              id: opt.opt_id,
+              name: opt.opt_nm,
+              price: opt.opt_prc
+            }))
+          }))
+          setMenuItems(formattedMenus)
+          
+          // 재고 정보 업데이트
+          const stockMap = {}
+          formattedMenus.forEach(menu => {
+            stockMap[menu.id] = menu.stock
+          })
+          Object.keys(stockMap).forEach(menuId => {
+            onUpdateInventory(parseInt(menuId), stockMap[menuId])
+          })
+        }
+      } catch (error) {
+        console.error('메뉴 로드 오류:', error)
+        showToast('메뉴를 불러오는데 실패했습니다.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadMenus()
+  }, [])
 
   const showToast = (message, duration = 3000) => {
     const id = generateId()
@@ -70,81 +113,133 @@ function OrderPage({ onOrder, resetKey, setResetKey, inventory, onUpdateInventor
     showToast('장바구니에 담겼습니다.')
   }
 
-  const handleOrder = () => {
+  const handleOrder = async () => {
     if (cart.length === 0) {
       showToast('장바구니가 비어있습니다.')
       return
     }
     
-    // 재고 검증
-    const insufficientStockItems = cart.filter(item => {
-      const currentStock = inventory[item.menuId] || 0
-      return item.quantity > currentStock
-    })
-    
-    if (insufficientStockItems.length > 0) {
-      const itemName = insufficientStockItems[0].menuName
-      showToast('재고가 없습니다.')
-      return
+    try {
+      // API 형식으로 변환
+      const orderItems = cart.map(item => {
+        // 옵션 ID 찾기
+        const menuItem = menuItems.find(m => m.id === item.menuId)
+        const optionIds = item.options.map(optName => {
+          const option = menuItem?.options.find(opt => opt.name === optName)
+          return option?.id
+        }).filter(Boolean)
+        
+        return {
+          prdId: item.menuId,
+          prd_cnt: item.quantity,
+          optionIds: optionIds,
+          unitPrice: item.price,
+          subtotal: item.price * item.quantity
+        }
+      })
+      
+      const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+      
+      // API 호출
+      const response = await orderAPI.createOrder({
+        items: orderItems,
+        totalAmount
+      })
+      
+      if (response.success) {
+        // 주문 성공
+        const order = {
+          id: response.data.orderId,
+          items: cart,
+          totalAmount: response.data.totalAmount,
+          status: response.data.status,
+          createdAt: new Date(response.data.orderDate)
+        }
+        
+        onOrder(order)
+        showToast('주문이 완료되었습니다!')
+        setCart([])
+        
+        // 메뉴 목록 다시 로드하여 재고 업데이트
+        const menuResponse = await menuAPI.getAllMenus()
+        if (menuResponse.success) {
+          menuResponse.data.forEach(menu => {
+            onUpdateInventory(menu.prd_id, menu.prd_stk)
+          })
+        }
+      }
+    } catch (error) {
+      console.error('주문 생성 오류:', error)
+      if (error.message.includes('재고')) {
+        showToast('재고가 없습니다.')
+      } else {
+        showToast('주문 처리 중 오류가 발생했습니다.')
+      }
     }
-    
-    // 주문 생성
-    const order = {
-      id: generateId(),
-      items: cart,
-      totalAmount: cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
-      status: 'received', // 주문 접수
-      createdAt: new Date()
-    }
-    
-    // 재고 감소
-    cart.forEach(item => {
-      const currentStock = inventory[item.menuId] || 0
-      const newStock = currentStock - item.quantity
-      onUpdateInventory(item.menuId, newStock)
-    })
-    
-    onOrder(order)
-    showToast('주문이 완료되었습니다!')
-    setCart([])
   }
 
-  const handleDirectOrder = (menuItem, selectedOptions) => {
-    // 재고 검증
-    const currentStock = inventory[menuItem.id] || 0
-    if (currentStock < 1) {
-      showToast('재고가 없습니다.')
-      return
+  const handleDirectOrder = async (menuItem, selectedOptions) => {
+    try {
+      // 옵션 정보 처리
+      const { optionNames, optionPrice } = processOptions(menuItem, selectedOptions)
+      
+      // 옵션 ID 찾기
+      const optionIds = selectedOptions.map(optId => {
+        const option = menuItem.options.find(opt => opt.id === optId)
+        return option?.id
+      }).filter(Boolean)
+      
+      // API 호출
+      const response = await orderAPI.createOrder({
+        items: [{
+          prdId: menuItem.id,
+          prd_cnt: 1,
+          optionIds: optionIds,
+          unitPrice: menuItem.price + optionPrice,
+          subtotal: menuItem.price + optionPrice
+        }],
+        totalAmount: menuItem.price + optionPrice
+      })
+      
+      if (response.success) {
+        // 주문 성공
+        const order = {
+          id: response.data.orderId,
+          items: [{
+            key: `${menuItem.id}-${selectedOptions.sort().join(',')}`,
+            menuId: menuItem.id,
+            menuName: menuItem.name,
+            options: optionNames,
+            price: menuItem.price + optionPrice,
+            quantity: 1
+          }],
+          totalAmount: response.data.totalAmount,
+          status: response.data.status,
+          createdAt: new Date(response.data.orderDate)
+        }
+        
+        onOrder(order)
+        showToast('주문이 완료되었습니다!')
+        
+        // 모든 메뉴 카드의 옵션 초기화
+        setResetKey(prev => prev + 1)
+        
+        // 메뉴 목록 다시 로드하여 재고 업데이트
+        const menuResponse = await menuAPI.getAllMenus()
+        if (menuResponse.success) {
+          menuResponse.data.forEach(menu => {
+            onUpdateInventory(menu.prd_id, menu.prd_stk)
+          })
+        }
+      }
+    } catch (error) {
+      console.error('주문 생성 오류:', error)
+      if (error.message.includes('재고')) {
+        showToast('재고가 없습니다.')
+      } else {
+        showToast('주문 처리 중 오류가 발생했습니다.')
+      }
     }
-    
-    // 옵션 정보 처리 (유틸리티 함수 사용)
-    const { optionNames, optionPrice } = processOptions(menuItem, selectedOptions)
-    
-    // 주문 생성
-    const order = {
-      id: generateId(),
-      items: [{
-        key: `${menuItem.id}-${selectedOptions.sort().join(',')}`,
-        menuId: menuItem.id,
-        menuName: menuItem.name,
-        options: optionNames,
-        price: menuItem.price + optionPrice,
-        quantity: 1
-      }],
-      totalAmount: menuItem.price + optionPrice,
-      status: 'received', // 주문 접수
-      createdAt: new Date()
-    }
-    
-    // 재고 감소
-    const newStock = currentStock - 1
-    onUpdateInventory(menuItem.id, newStock)
-    
-    onOrder(order)
-    showToast('주문이 완료되었습니다!')
-    
-    // 모든 메뉴 카드의 옵션 초기화
-    setResetKey(prev => prev + 1)
   }
 
   const handleUpdateQuantity = (itemKey, change) => {
@@ -168,6 +263,10 @@ function OrderPage({ onOrder, resetKey, setResetKey, inventory, onUpdateInventor
 
   const handleClearCart = () => {
     setCart([])
+  }
+
+  if (loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>메뉴를 불러오는 중...</div>
   }
 
   return (

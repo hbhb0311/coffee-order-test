@@ -7,22 +7,15 @@ import './App.css'
 function App() {
   const [currentPage, setCurrentPage] = useState('order')
   const [resetKey, setResetKey] = useState(0)
-  const [orders, setOrders] = useState([])
-  const [inventory, setInventory] = useState({
-    1: 10, // 아메리카노 (ICE)
-    2: 10, // 아메리카노 (HOT)
-    3: 10, // 카페라떼
-    4: 10, // 카푸치노
-    5: 10, // 에스프레소
-    6: 10  // 카라멜 마키아토
-  })
+  const [inventory, setInventory] = useState({})
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
   }
 
   const handleOrder = (order) => {
-    setOrders(prevOrders => [...prevOrders, order])
+    // 주문은 백엔드에서 관리하므로 여기서는 로그만 남김
+    console.log('주문 완료:', order)
   }
 
   const handleUpdateInventory = (menuId, quantity) => {
@@ -33,13 +26,8 @@ function App() {
   }
 
   const handleUpdateOrderStatus = (orderId, newStatus) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
-        order.id === orderId
-          ? { ...order, status: newStatus }
-          : order
-      )
-    )
+    // 주문 상태는 백엔드에서 관리하므로 여기서는 로그만 남김
+    console.log('주문 상태 변경:', orderId, newStatus)
   }
 
   return (
@@ -55,7 +43,6 @@ function App() {
         />
       ) : (
         <AdminPage
-          orders={orders}
           inventory={inventory}
           onUpdateInventory={handleUpdateInventory}
           onUpdateOrderStatus={handleUpdateOrderStatus}

@@ -1,71 +1,122 @@
--- 커피 주문 앱 데이터베이스 초기화 스크립트
+-- 커피 주문 앱 데이터베이스 초기화 스크립트 (PRD 기반)
 
--- 데이터베이스 생성 (PostgreSQL 명령줄에서 실행)
--- CREATE DATABASE order_app;
+-- 기존 테이블 삭제 (개발 환경용)
+DROP TABLE IF EXISTS order_product_option CASCADE;
+DROP TABLE IF EXISTS order_product CASCADE;
+DROP TABLE IF EXISTS order_status_history CASCADE;
+DROP TABLE IF EXISTS "order" CASCADE;
+DROP TABLE IF EXISTS product_option CASCADE;
+DROP TABLE IF EXISTS option CASCADE;
+DROP TABLE IF EXISTS product CASCADE;
 
--- 데이터베이스 연결
--- \c order_app
-
--- 메뉴 테이블
-CREATE TABLE IF NOT EXISTS menus (
+-- Product (상품) 테이블
+CREATE TABLE product (
     prd_id SERIAL PRIMARY KEY,
-    prd_name VARCHAR(100) NOT NULL,
-    prd_price INTEGER NOT NULL,
+    prd_nm VARCHAR(100) NOT NULL,
+    prd_desc TEXT,
+    prd_prc INTEGER NOT NULL CHECK (prd_prc >= 0),
     prd_img VARCHAR(255),
-    prd_stock INTEGER DEFAULT 10,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    prd_stk INTEGER DEFAULT 10 CHECK (prd_stk >= 0 AND prd_stk <= 999),
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 주문 테이블
-CREATE TABLE IF NOT EXISTS orders (
-    order_id VARCHAR(50) PRIMARY KEY,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    order_status VARCHAR(20) DEFAULT 'pending',
-    total_price INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Option (옵션) 테이블
+CREATE TABLE option (
+    opt_id SERIAL PRIMARY KEY,
+    opt_nm VARCHAR(100) NOT NULL,
+    opt_prc INTEGER NOT NULL CHECK (opt_prc >= 0),
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 주문 상세 테이블
-CREATE TABLE IF NOT EXISTS order_items (
-    id SERIAL PRIMARY KEY,
-    order_id VARCHAR(50) NOT NULL,
-    prd_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL,
-    price INTEGER NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
-    FOREIGN KEY (prd_id) REFERENCES menus(prd_id) ON DELETE CASCADE
+-- ProductOption (상품-옵션 관계) 테이블
+CREATE TABLE product_option (
+    prd_opt_id SERIAL PRIMARY KEY,
+    prd_id INTEGER NOT NULL REFERENCES product(prd_id) ON DELETE CASCADE,
+    opt_id INTEGER NOT NULL REFERENCES option(opt_id) ON DELETE CASCADE,
+    del_yn VARCHAR(1) DEFAULT 'N',
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(prd_id, opt_id)
 );
 
--- 주문 상태 이력 테이블
-CREATE TABLE IF NOT EXISTS order_status_history (
-    id SERIAL PRIMARY KEY,
-    order_id VARCHAR(50) NOT NULL,
-    status VARCHAR(20) NOT NULL,
-    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+-- Order (주문) 테이블
+CREATE TABLE "order" (
+    ord_id SERIAL PRIMARY KEY,
+    ord_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ord_sts VARCHAR(20) DEFAULT 'received' CHECK (ord_sts IN ('received', 'in_progress', 'completed')),
+    tot_amt INTEGER NOT NULL CHECK (tot_amt >= 0),
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OrderStatusHistory (주문 상태 변경 이력) 테이블
+CREATE TABLE order_status_history (
+    ord_sts_hist_id SERIAL PRIMARY KEY,
+    ord_id INTEGER NOT NULL REFERENCES "order"(ord_id) ON DELETE CASCADE,
+    ord_sts VARCHAR(20) NOT NULL CHECK (ord_sts IN ('received', 'in_progress', 'completed')),
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OrderProduct (주문 상품) 테이블
+CREATE TABLE order_product (
+    ord_prd_id SERIAL PRIMARY KEY,
+    ord_id INTEGER NOT NULL REFERENCES "order"(ord_id) ON DELETE CASCADE,
+    prd_id INTEGER NOT NULL REFERENCES product(prd_id) ON DELETE CASCADE,
+    prd_cnt INTEGER NOT NULL CHECK (prd_cnt >= 1),
+    unit_amt INTEGER NOT NULL CHECK (unit_amt >= 0),
+    subtot_amt INTEGER NOT NULL CHECK (subtot_amt >= 0),
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- OrderProductOption (주문 상품 옵션) 테이블
+CREATE TABLE order_product_option (
+    ord_opt_id SERIAL PRIMARY KEY,
+    ord_prd_id INTEGER NOT NULL REFERENCES order_product(ord_prd_id) ON DELETE CASCADE,
+    opt_id INTEGER NOT NULL REFERENCES option(opt_id) ON DELETE CASCADE,
+    opt_prc INTEGER NOT NULL CHECK (opt_prc >= 0),
+    crt_dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 인덱스 생성
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
-CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);
-CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX IF NOT EXISTS idx_order_status_history_order_id ON order_status_history(order_id);
+CREATE INDEX idx_product_prd_id ON product(prd_id);
+CREATE INDEX idx_option_opt_id ON option(opt_id);
+CREATE INDEX idx_product_option_prd_id ON product_option(prd_id);
+CREATE INDEX idx_product_option_opt_id ON product_option(opt_id);
+CREATE INDEX idx_order_ord_id ON "order"(ord_id);
+CREATE INDEX idx_order_ord_sts ON "order"(ord_sts);
+CREATE INDEX idx_order_ord_dt ON "order"(ord_dt);
+CREATE INDEX idx_order_status_history_ord_id ON order_status_history(ord_id);
+CREATE INDEX idx_order_status_history_crt_dt ON order_status_history(crt_dt);
+CREATE INDEX idx_order_status_history_ord_id_crt_dt ON order_status_history(ord_id, crt_dt);
+CREATE INDEX idx_order_product_ord_id ON order_product(ord_id);
+CREATE INDEX idx_order_product_prd_id ON order_product(prd_id);
+CREATE INDEX idx_order_product_option_ord_prd_id ON order_product_option(ord_prd_id);
+CREATE INDEX idx_order_product_option_opt_id ON order_product_option(opt_id);
 
 -- 업데이트 시간 자동 갱신 함수
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW.updt_dt = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
 -- 트리거 설정
-CREATE TRIGGER update_menus_updated_at BEFORE UPDATE ON menus
+CREATE TRIGGER update_product_updated_at BEFORE UPDATE ON product
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders
+CREATE TRIGGER update_option_updated_at BEFORE UPDATE ON option
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_product_option_updated_at BEFORE UPDATE ON product_option
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_order_updated_at BEFORE UPDATE ON "order"
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_order_status_history_updated_at BEFORE UPDATE ON order_status_history
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

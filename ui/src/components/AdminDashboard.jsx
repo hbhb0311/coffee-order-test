@@ -1,19 +1,10 @@
-import { useMemo } from 'react'
 import './AdminDashboard.css'
 
-function AdminDashboard({ orders, statusFilter, onFilterChange }) {
-  // 성능 최적화: 통계 계산 결과를 메모이제이션
-  const stats = useMemo(() => ({
-    total: orders.length,
-    received: orders.filter(order => order.status === 'received').length,
-    inProgress: orders.filter(order => order.status === 'in_progress').length,
-    completed: orders.filter(order => order.status === 'completed').length
-  }), [orders])
-
-  const totalOrders = stats.total
-  const receivedOrders = stats.received
-  const inProgressOrders = stats.inProgress
-  const completedOrders = stats.completed
+function AdminDashboard({ statistics, statusFilter, onFilterChange }) {
+  const totalOrders = statistics.total || 0
+  const receivedOrders = statistics.received || 0
+  const inProgressOrders = statistics.inProgress || 0
+  const completedOrders = statistics.completed || 0
 
   return (
     <div className="admin-dashboard">

@@ -12,6 +12,10 @@ const dbConfig = {
   database: process.env.DB_NAME || 'order_app',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || '',
+  // SSL 설정 (Render PostgreSQL은 SSL 필수)
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: false // Render의 자체 서명된 인증서 허용
+  } : false, // 로컬 개발 환경에서는 SSL 비활성화
   // 연결 풀 설정
   max: 20, // 최대 연결 수
   idleTimeoutMillis: 30000, // 유휴 연결 타임아웃 (30초)
@@ -75,6 +79,11 @@ export const testConnection = async () => {
     } else if (error.code === 'ENOTFOUND') {
       console.error('\n💡 해결 방법:')
       console.error('   1. DB_HOST가 올바른지 확인하세요.')
+    } else if (error.code === '28000' || error.message.includes('SSL/TLS')) {
+      console.error('\n💡 해결 방법:')
+      console.error('   1. Render PostgreSQL은 SSL 연결이 필수입니다.')
+      console.error('   2. 데이터베이스 연결 설정에 SSL 옵션이 포함되어 있는지 확인하세요.')
+      console.error('   3. NODE_ENV=production으로 설정되어 있는지 확인하세요.')
     } else {
       console.error(`   에러 코드: ${error.code || '알 수 없음'}`)
       console.error('   전체 에러:', error)

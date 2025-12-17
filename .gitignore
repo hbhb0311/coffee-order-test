@@ -1,0 +1,8 @@
+# 배포 관련 파일
+DEPLOY.md
+render.yaml
+
+# 기타
+.DS_Store
+Thumbs.db
+

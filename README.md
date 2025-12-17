@@ -71,7 +71,6 @@ order-app/
 ├── docs/
 │   └── PRD.md              # 프로젝트 요구사항 문서
 │
-├── DEPLOY.md               # 배포 가이드
 ├── render.yaml             # Render 배포 설정
 └── README.md               
 ```

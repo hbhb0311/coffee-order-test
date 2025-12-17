@@ -13,7 +13,7 @@
 - [배포](#배포)
 - [문서](#문서)
 
-## ✨ 주요 기능
+## ✨ 주요 기능 {#주요-기능}
 
 ### 고객 기능
 - 🍵 **메뉴 조회**: 커피 메뉴 목록 및 옵션 확인
@@ -25,7 +25,7 @@
 - 📋 **주문 관리**: 주문 목록 조회 및 상태 변경 (대기 → 준비중 → 완료)
 - 📦 **재고 관리**: 메뉴별 재고 수량 수정
 
-## 🛠 기술 스택
+## 🛠 기술 스택 {#기술-스택}
 
 ### 프론트엔드
 - **React 18** - UI 라이브러리
@@ -41,7 +41,7 @@
 ### 배포
 - **Render.com** - 호스팅 플랫폼 (PostgreSQL, Web Service, Static Site)
 
-## 📁 프로젝트 구조
+## 📁 프로젝트 구조 {#프로젝트-구조}
 
 ```
 order-app/
@@ -75,7 +75,7 @@ order-app/
 └── README.md               
 ```
 
-## 🚀 시작하기
+## 🚀 시작하기 {#시작하기}
 
 ### 사전 요구사항
 
@@ -130,7 +130,7 @@ npm run dev
 
 자세한 내용은 [ui/README.md](./ui/README.md)를 참고하세요.
 
-## ⚙️ 환경 변수 설정
+## ⚙️ 환경 변수 설정 {#환경-변수-설정}
 
 ### 백엔드 (server/.env)
 
@@ -160,7 +160,7 @@ FRONTEND_URL=http://localhost:3000
 VITE_API_URL=https://your-backend-url.onrender.com
 ```
 
-## 📚 API 문서
+## 📚 API 문서 {#api-문서}
 
 ### 메뉴 관련
 
@@ -178,7 +178,7 @@ VITE_API_URL=https://your-backend-url.onrender.com
 
 자세한 API 문서는 [server/README.md](./server/README.md)를 참고하세요.
 
-## 🚢 배포
+## 🚢 배포 {#배포}
 
 이 프로젝트는 **Render.com**을 사용하여 배포됩니다.
 
@@ -188,7 +188,7 @@ VITE_API_URL=https://your-backend-url.onrender.com
 2. **백엔드 서비스 배포**
 3. **프론트엔드 정적 사이트 배포**
 
-## 📖 문서
+## 📖 문서 {#문서}
 
 - [프로젝트 요구사항 (PRD)](./docs/PRD.md) - 상세 기능 명세
 - [백엔드 README](./server/README.md) - 백엔드 개발 가이드
